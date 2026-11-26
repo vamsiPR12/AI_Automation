@@ -40,6 +40,42 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+
+const customerSchema = {
+  type: "object",
+  properties: {
+    customer_name: {
+      type: ["string", "null"],
+    },
+    budget_inr: {
+      type: ["number", "null"],
+    },
+    location: {
+      type: ["string", "null"],
+    },
+    property_type: {
+      type: ["string", "null"],
+    },
+    lead_status: {
+      type: "string",
+      enum: ["new", "interested", "qualified", "not_interested"],
+    },
+    next_question: {
+      type: "string",
+    },
+  },
+  required: [
+    "customer_name",
+    "budget_inr",
+    "location",
+    "property_type",
+    "lead_status",
+    "next_question",
+  ],
+  additionalProperties: false,
+};
+
+
 router.post("/chat", async (req: Request, res: Response) => {
   try {
     const { message } = req.body ?? {};
@@ -53,15 +89,42 @@ router.post("/chat", async (req: Request, res: Response) => {
 
     const response = await openai.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-6-luna",
-      instructions: systemPrompt,
+      instructions: `
+    You are an AI real estate sales assistant.
+
+    Extract customer information from the message.
+
+    Rules:
+    - Never invent customer details.
+    - If a detail is missing, return null.
+    - Convert budgets into Indian rupees.
+    - Classify the lead accurately.
+    - Ask one relevant follow-up question.
+    - Return only information supported by the conversation.
+  `,
+      //instructions: systemPrompt,
       input: message.trim(),
+      text: {
+    format: {
+      type: "json_schema",
+      name: "customer_lead",
+      strict: true,
+      schema: customerSchema,
+    },
+  },
     });
 
-    return res.status(200).json({
+   {/*return res.status(200).json({
       success: true,
       reply: response.output_text,
-    });
+    });*/}
 
+    
+    const customerData = JSON.parse(response.output_text);
+    return res.status(200).json({
+      success: true,
+      data: customerData,
+});
   } catch (error) {
     console.error("OpenAI error:", error);
 
