@@ -22,7 +22,11 @@ async function chat() {
     console.log("AI Response:", response.output_text);
 
   } catch (error) {
-    console.log("Something went wrong:", error.message);
+    if (error instanceof Error) {
+  console.log("Something went wrong:", error.message);
+} else {
+  console.log("Something went wrong:", error);
+}
   }
 }
 
